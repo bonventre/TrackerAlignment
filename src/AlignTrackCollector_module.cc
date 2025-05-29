@@ -301,11 +301,11 @@ AlignTrackCollector::AlignTrackCollector(const Parameters& conf) :
     _panelSigmas.push_back(conf().panelsigmary());
     _panelSigmas.push_back(conf().panelsigmarz());
     for (size_t i=0;i<6;i++){
-      if (_panelValues.size() != StrawId::_nupanels){
+      if (_panelValues[i].size() != StrawId::_nupanels){
         if (_panelValues[i].size() == 0){
           std::cout << "PanelValues " << i << " not set! using 0 as default" << std::endl;
         } else{
-          std::cout << "Warning! Incorrect number of panelValues " << i << std::endl;
+          std::cout << "Warning! Incorrect number of panelValues " << i << " (" << _panelValues[i].size() << " != " << StrawId::_nupanels << ")" << std::endl;
         }
         _panelValues[i] = std::vector<float>(StrawId::_nupanels,0);
       }
@@ -785,44 +785,46 @@ void AlignTrackCollector::writeMillepedeConstraints(Tracker const& nominalTracke
     }
   }
 
-  // panel overall z translation is fixed (relative to plane)
-  output_file << "! panels follow" << std::endl;
-  // one constraint per plane
-  for (uint16_t p = 0; p < StrawId::_nplanes; ++p) {
-    // check if any of these DOF are enabled
-    bool has_enabled = false;
-    for (uint16_t pa=0;pa<StrawId::_npanels;++pa){
-      if (isDOFenabled(2, p*StrawId::_npanels+pa, 2) && !isDOFfixed(2, p*StrawId::_npanels+pa, 2)) {
-        has_enabled = true;
-        break;
+  if (!_fixPanelPerPlane){
+    // panel overall z translation is fixed (relative to plane)
+    output_file << "! panels follow" << std::endl;
+    // one constraint per plane
+    for (uint16_t p = 0; p < StrawId::_nplanes; ++p) {
+      // check if any of these DOF are enabled
+      bool has_enabled = false;
+      for (uint16_t pa=0;pa<StrawId::_npanels;++pa){
+        if (isDOFenabled(2, p*StrawId::_npanels+pa, 2) && !isDOFfixed(2, p*StrawId::_npanels+pa, 2)) {
+          has_enabled = true;
+          break;
+        }
       }
-    }
-    if (!has_enabled)
-      continue;
-    // measure the initial overall translation or rotation to check that it is zero
-    double current_overall = 0;
-    for (uint16_t pa=0;pa<StrawId::_npanels;pa++){
-      StrawId tempid(p,pa,0);
-      CLHEP::Hep3Vector zhat(0,0,1);
-      if (nominalTracker.getPanel(tempid).wDirection().dot(zhat) > 0)
-        current_overall += _startingAlignPanels[(p*StrawId::_npanels+pa)*6 + 2];
-      else
-        current_overall -= _startingAlignPanels[(p*StrawId::_npanels+pa)*6 + 2];
-    }
-    if (fabs(current_overall) > 1e-5){
-      std::cout << "AlignTrackCollector: Warning - panels in plane " << p << " have nonzero total z misalignment : " << current_overall << std::endl;
-    }
-
-    output_file << "Constraint   0" << std::endl;
-    for (uint16_t pa=0; pa < StrawId::_npanels; ++ pa){
-      if (!isDOFenabled(2, p*StrawId::_npanels+pa, 2))
+      if (!has_enabled)
         continue;
-      StrawId tempid(p,pa,0);
-      CLHEP::Hep3Vector zhat(0,0,1);
-      if (nominalTracker.getPanel(tempid).wDirection().dot(zhat) > 0)
-        output_file << getLabel(2, p*StrawId::_npanels+pa, 2) << "    1" << std::endl;
-      else
-        output_file << getLabel(2, p*StrawId::_npanels+pa, 2) << "    -1" << std::endl;
+      // measure the initial overall translation or rotation to check that it is zero
+      double current_overall = 0;
+      for (uint16_t pa=0;pa<StrawId::_npanels;pa++){
+        StrawId tempid(p,pa,0);
+        CLHEP::Hep3Vector zhat(0,0,1);
+        if (nominalTracker.getPanel(tempid).wDirection().dot(zhat) > 0)
+          current_overall += _startingAlignPanels[(p*StrawId::_npanels+pa)*6 + 2];
+        else
+          current_overall -= _startingAlignPanels[(p*StrawId::_npanels+pa)*6 + 2];
+      }
+      if (fabs(current_overall) > 1e-5){
+        std::cout << "AlignTrackCollector: Warning - panels in plane " << p << " have nonzero total z misalignment : " << current_overall << std::endl;
+      }
+
+      output_file << "Constraint   0" << std::endl;
+      for (uint16_t pa=0; pa < StrawId::_npanels; ++ pa){
+        if (!isDOFenabled(2, p*StrawId::_npanels+pa, 2))
+          continue;
+        StrawId tempid(p,pa,0);
+        CLHEP::Hep3Vector zhat(0,0,1);
+        if (nominalTracker.getPanel(tempid).wDirection().dot(zhat) > 0)
+          output_file << getLabel(2, p*StrawId::_npanels+pa, 2) << "    1" << std::endl;
+        else
+          output_file << getLabel(2, p*StrawId::_npanels+pa, 2) << "    -1" << std::endl;
+      }
     }
   }
 
