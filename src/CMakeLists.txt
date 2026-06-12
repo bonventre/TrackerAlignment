@@ -39,4 +39,23 @@ cet_build_plugin(AlignTrackCollector art::module
       ROOT::Postscript
 )
 
+cet_build_plugin(AlignKKTrackCollector art::module
+  REG_SOURCE AlignKKTrackCollector_module.cc
+    LIBRARIES REG
+      tracker-alignment::AlignmentUtilities
+      Offline::CosmicReco
+      Offline::MCDataProducts
+      Offline::RecoDataProducts
+      Offline::DataProducts
+      Offline::GeometryService
+      Offline::ProditionsService
+      Offline::TrackerConditions
+      Offline::TrackerGeom
+      Offline::Mu2eUtilities
+      Offline::GeneralUtilities
+      Offline::RecoDataProducts
+      art_root_io::TFileService_service
+      ROOT::Postscript
+)
+
 install_source(SUBDIRS src)
